@@ -5,8 +5,14 @@ import type {
   ProductScoreResult,
 } from '@calculadora/shared';
 import { calculateCalculator, calculateProductScore } from '@calculadora/shared';
+import {
+  calculatorInputSchema,
+  productScoreInputSchema,
+  validationFieldErrors,
+} from './calculator.validation';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const USE_BACKEND = import.meta.env.VITE_USE_BACKEND === 'true' && Boolean(API_URL);
 
 interface ApiErrorBody {
   message?: string;
@@ -33,15 +39,25 @@ async function safeJson<T>(response: Response): Promise<T | null> {
   }
 }
 
-function isUnavailable(status: number): boolean {
-  return status === 0 || status === 404;
+function validateInput<T>(
+  result: ReturnType<typeof calculatorInputSchema.safeParse> | ReturnType<typeof productScoreInputSchema.safeParse>,
+): T {
+  if (!result.success) {
+    throw new ApiError(
+      'La solicitud contiene datos inválidos',
+      400,
+      validationFieldErrors(result.error),
+    );
+  }
+
+  return result.data as T;
 }
 
 async function post<T>(path: string, body: unknown, fallback: () => T): Promise<T> {
   let response: Response;
 
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    response = await fetch(`${API_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -50,14 +66,16 @@ async function post<T>(path: string, body: unknown, fallback: () => T): Promise<
     return fallback();
   }
 
-  if (!response.ok) {
-    if (isUnavailable(response.status)) {
-      return fallback();
-    }
+  const isJson = response.headers.get('content-type')?.includes('json') ?? false;
 
+  if (response.status === 404 || response.status === 405 || !isJson) {
+    return fallback();
+  }
+
+  if (!response.ok) {
     const errorBody = (await safeJson<ApiErrorBody>(response)) ?? {};
     throw new ApiError(
-      errorBody.message ?? 'La solicitud no es válida',
+      errorBody.message ?? 'La solicitud contiene datos inválidos',
       response.status,
       errorBody.errors ?? {},
     );
@@ -69,9 +87,23 @@ async function post<T>(path: string, body: unknown, fallback: () => T): Promise<
 }
 
 export function calculateRemote(input: CalculatorInput): Promise<CalculatorResult> {
-  return post('/api/calculator', input, () => calculateCalculator(input));
+  const validatedInput = validateInput<CalculatorInput>(calculatorInputSchema.safeParse(input));
+  const fallback = () => calculateCalculator(validatedInput);
+
+  if (!USE_BACKEND) {
+    return Promise.resolve(fallback());
+  }
+
+  return post('/api/calculator', validatedInput, fallback);
 }
 
 export function scoreProductRemote(input: ProductScoreInput): Promise<ProductScoreResult> {
-  return post('/api/calculator/score', input, () => calculateProductScore(input));
+  const validatedInput = validateInput<ProductScoreInput>(productScoreInputSchema.safeParse(input));
+  const fallback = () => calculateProductScore(validatedInput);
+
+  if (!USE_BACKEND) {
+    return Promise.resolve(fallback());
+  }
+
+  return post('/api/calculator/score', validatedInput, fallback);
 }
