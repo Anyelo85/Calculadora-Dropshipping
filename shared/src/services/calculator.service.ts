@@ -7,8 +7,10 @@ import {
 import type { CalculatorInput, CalculatorResult } from '../types/calculator.types';
 import { toNumber } from '../utils/numbers';
 import {
-  calculateIdealSalePrice,
+  calculateBaseCost,
   calculateBulkPrice,
+  calculateDropiCommission,
+  calculateIdealSalePrice,
   calculateTotalCost,
 } from './pricing.service';
 import {
@@ -48,20 +50,22 @@ function normalizeInput(input: CalculatorInput): NormalizedCalculatorInput {
 export function calculateCalculator(input: CalculatorInput): CalculatorResult {
   const data = normalizeInput(input);
 
-  const totalCost = calculateTotalCost({
+  const baseCost = calculateBaseCost({
     productCost: data.productCost,
     shippingCost: data.shippingCost,
     productWeightKg: data.productWeightKg,
     shippingCostPerKg: data.shippingCostPerKg,
-    dropiCommission: data.dropiCommission,
     estimatedCpa: data.estimatedCpa,
     orderCount: data.orderCount,
   });
   const idealSalePrice = calculateIdealSalePrice(
-    totalCost,
+    baseCost,
     data.profitMargin,
+    data.dropiCommission,
     data.supplierPrice,
   );
+  const dropiCommissionAmount = calculateDropiCommission(idealSalePrice, data.dropiCommission);
+  const totalCost = calculateTotalCost(baseCost, dropiCommissionAmount);
   const profitPerSale = calculateProfitPerSale(idealSalePrice, totalCost);
 
   return {

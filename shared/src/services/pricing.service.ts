@@ -5,34 +5,40 @@ export interface PricingCostInput {
   shippingCost?: number;
   productWeightKg?: number;
   shippingCostPerKg?: number;
-  dropiCommission?: number;
   estimatedCpa?: number;
   orderCount?: number;
 }
 
-export function calculateTotalCost(input: PricingCostInput): number {
+export function calculateBaseCost(input: PricingCostInput): number {
   const fixedShipping = input.shippingCost ?? 0;
   const perKgShipping = input.shippingCostPerKg ?? 0;
   const totalWeight = (input.productWeightKg ?? 0) * Math.max(1, Math.floor(input.orderCount ?? 1));
   const weightShipping = totalWeight * perKgShipping;
 
   return round2(
-    (input.dropiCommission ?? 0) +
-      input.productCost +
-      fixedShipping +
-      weightShipping +
-      (input.estimatedCpa ?? 0),
+    input.productCost + fixedShipping + weightShipping + (input.estimatedCpa ?? 0),
   );
 }
 
 export function calculateIdealSalePrice(
-  totalCost: number,
+  baseCost: number,
   profitMargin: number,
+  dropiCommission: number,
   supplierPrice: number,
 ): number {
   const margin = profitMargin / 100;
-  const price = totalCost + totalCost * margin;
+  const commissionRate = dropiCommission / 100;
+  const divisor = 1 - commissionRate * (1 + margin);
+  const price = divisor > 0 ? (baseCost * (1 + margin)) / divisor : baseCost * (1 + margin);
   return round2(Math.max(price, supplierPrice));
+}
+
+export function calculateDropiCommission(salePrice: number, dropiCommission: number): number {
+  return round2(salePrice * (dropiCommission / 100));
+}
+
+export function calculateTotalCost(baseCost: number, dropiCommissionAmount: number): number {
+  return round2(baseCost + dropiCommissionAmount);
 }
 
 export function calculateBulkPrice(unitPrice: number, units: number, discount: number): number {

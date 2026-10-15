@@ -35,9 +35,10 @@ export const calculatorInputSchema = z.object({
     .default(30),
   dropiCommission: z
     .number({ invalid_type_error: 'La comisión DROPI debe ser un número' })
-    .nonnegative('La comisión DROPI no puede ser negativa')
+    .min(0, 'La comisión DROPI no puede ser negativa')
+    .max(100, 'La comisión DROPI no puede superar el 100%')
     .optional()
-    .default(4),
+    .default(5),
   estimatedCpa: z
     .number({ invalid_type_error: 'El CPA debe ser un número' })
     .nonnegative('El CPA no puede ser negativo')

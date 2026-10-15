@@ -8,7 +8,7 @@ const validPayload = {
   shippingCost: 16000,
   supplierPrice: 0,
   profitMargin: 30,
-  dropiCommission: 4,
+        dropiCommission: 5,
   estimatedCpa: 20500,
   orderCount: 1,
 };
@@ -35,7 +35,7 @@ describe('calculatorInputSchema', () => {
         shippingCostPerKg: 0,
         supplierPrice: 0,
         profitMargin: 30,
-        dropiCommission: 4,
+  dropiCommission: 5,
         estimatedCpa: 0,
         orderCount: 1,
       });
@@ -70,6 +70,18 @@ describe('calculatorInputSchema', () => {
     const result = calculatorInputSchema.safeParse({ ...validPayload, profitMargin: 1500 });
 
     expect(result.success).toBe(false);
+  });
+
+  it('rechaza una comisión DROPI superior al 100%', () => {
+    const result = calculatorInputSchema.safeParse({ ...validPayload, dropiCommission: 101 });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('acepta una comisión DROPI en 0', () => {
+    const result = calculatorInputSchema.safeParse({ ...validPayload, dropiCommission: 0 });
+
+    expect(result.success).toBe(true);
   });
 
   it('rechaza un proveedor con valor no numérico', () => {

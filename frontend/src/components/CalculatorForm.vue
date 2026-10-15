@@ -31,14 +31,14 @@ interface SectionConfig {
 }
 
 const form = reactive<CalculatorInput>({
-  productCost: 20000,
-  shippingCost: 16000,
+  productCost: 0,
+  shippingCost: 0,
   productWeightKg: 0,
   shippingCostPerKg: 0,
   supplierPrice: 0,
-  profitMargin: DEFAULT_PROFIT_MARGIN,
+  profitMargin: 25,
   dropiCommission: DEFAULT_DROPI_COMMISSION,
-  estimatedCpa: 20500,
+  estimatedCpa: 0,
   orderCount: 1,
 });
 
@@ -48,7 +48,7 @@ const sections: SectionConfig[] = [
     fields: [
       { key: 'productCost', id: 'productCost', label: 'Valor del Producto', unit: 'COL', thousands: true },
       { key: 'supplierPrice', id: 'supplierPrice', label: 'Precio Sugerido del Proveedor', unit: 'COL', thousands: true },
-      { key: 'dropiCommission', id: 'dropiCommission', label: 'Comisión DROPI', unit: 'COL', thousands: true },
+      { key: 'dropiCommission', id: 'dropiCommission', label: 'Comisión DROPI', unit: '%' },
     ],
   },
   {
@@ -84,7 +84,7 @@ const display = reactive<Record<FieldKey, string>>({
   shippingCostPerKg: formatDecimal(form.shippingCostPerKg ?? 0),
   supplierPrice: formatThousands(form.supplierPrice ?? 0),
   profitMargin: String(form.profitMargin ?? DEFAULT_PROFIT_MARGIN),
-  dropiCommission: formatThousands(form.dropiCommission ?? DEFAULT_DROPI_COMMISSION),
+  dropiCommission: String(form.dropiCommission ?? DEFAULT_DROPI_COMMISSION),
   estimatedCpa: formatThousands(form.estimatedCpa ?? 0),
   orderCount: String(form.orderCount ?? 1),
 });
@@ -97,7 +97,8 @@ for (const section of sections) {
 }
 
 function onUpdate(key: FieldKey, value: string): void {
-  const allowDecimal = key === 'productWeightKg' || key === 'shippingCostPerKg';
+  const allowDecimal =
+    key === 'productWeightKg' || key === 'shippingCostPerKg' || key === 'dropiCommission';
   const sanitized = value.replace(/\s/g, '');
   const normalized = allowDecimal
     ? sanitized.replace(/\./g, '').replace(',', '.')

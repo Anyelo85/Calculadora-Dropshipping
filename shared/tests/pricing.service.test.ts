@@ -1,29 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateBaseCost,
   calculateBulkPrice,
+  calculateDropiCommission,
   calculateIdealSalePrice,
   calculateTotalCost,
 } from '../src/services/pricing.service';
 
-describe('calculateTotalCost', () => {
-  it('suma comisión, producto, envío y CPA', () => {
-    const result = calculateTotalCost({
+describe('calculateBaseCost', () => {
+  it('suma producto, envío y CPA sin la comisión', () => {
+    const result = calculateBaseCost({
       productCost: 20000,
       shippingCost: 16000,
-      dropiCommission: 4,
       estimatedCpa: 20500,
     });
 
-    expect(result).toBe(56504);
+    expect(result).toBe(56500);
   });
 
   it('calcula el envío por peso cuando el transportista cobra por kg', () => {
-    const result = calculateTotalCost({
+    const result = calculateBaseCost({
       productCost: 20000,
       shippingCost: 0,
       productWeightKg: 20,
       shippingCostPerKg: 25000,
-      dropiCommission: 0,
       estimatedCpa: 0,
       orderCount: 1,
     });
@@ -33,16 +33,36 @@ describe('calculateTotalCost', () => {
 });
 
 describe('calculateIdealSalePrice', () => {
-  it('aplica el margen sobre el costo total', () => {
-    expect(calculateIdealSalePrice(1000, 30, 0)).toBe(1300);
+  it('invierte la comisión para mantener la utilidad sobre el costo', () => {
+    expect(calculateIdealSalePrice(84000, 30, 5, 0)).toBe(116791.44);
+  });
+
+  it('con comisión 0 aplica sólo el margen', () => {
+    expect(calculateIdealSalePrice(1000, 30, 0, 0)).toBe(1300);
   });
 
   it('respeta el precio del proveedor como piso', () => {
-    expect(calculateIdealSalePrice(1000, 30, 5000)).toBe(5000);
+    expect(calculateIdealSalePrice(1000, 30, 0, 5000)).toBe(5000);
   });
 
-  it('con margen 0 devuelve el costo total', () => {
-    expect(calculateIdealSalePrice(1000, 0, 0)).toBe(1000);
+  it('con margen 0 devuelve el costo más la comisión', () => {
+    expect(calculateIdealSalePrice(1000, 0, 0, 0)).toBe(1000);
+  });
+});
+
+describe('calculateDropiCommission', () => {
+  it('cobra el porcentaje sobre el precio de venta', () => {
+    expect(calculateDropiCommission(116791.44, 5)).toBe(5839.57);
+  });
+
+  it('con comisión 0 no cobra nada', () => {
+    expect(calculateDropiCommission(1000, 0)).toBe(0);
+  });
+});
+
+describe('calculateTotalCost', () => {
+  it('suma el costo base y la comisión en pesos', () => {
+    expect(calculateTotalCost(84000, 5839.57)).toBe(89839.57);
   });
 });
 

@@ -24,7 +24,7 @@ const unitPrices = computed(() => {
   const productWeightKg = props.input.productWeightKg ?? 0;
   const shippingCostPerKg = props.input.shippingCostPerKg ?? 0;
   const estimatedCpa = props.input.estimatedCpa ?? 0;
-  const commission = props.input.dropiCommission ?? DEFAULT_DROPI_COMMISSION;
+  const commissionRate = props.input.dropiCommission ?? DEFAULT_DROPI_COMMISSION;
 
   const tiers = [
     {
@@ -54,7 +54,7 @@ const unitPrices = computed(() => {
     const valor = round2(productCost * tier.count);
     const transportePorPeso = round2(productWeightKg * shippingCostPerKg * tier.count);
     const transporteTotal = round2(shippingCost + transportePorPeso);
-    const comisionPorVenta = round2(commission);
+    const comisionPorVenta = round2(tier.price * (commissionRate / 100));
     const cpaPorAccion = round2(estimatedCpa);
     const costoOferta = round2(valor + transporteTotal + comisionPorVenta + cpaPorAccion);
     const ganancia = round2(tier.price - costoOferta);
