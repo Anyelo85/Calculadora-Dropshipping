@@ -39,8 +39,8 @@ La idea principal es evitar mezclar cálculo con DOM, HTML y eventos inline. Tod
    - Orquesta la lógica de cálculo y devuelve respuestas consistentes.
 
 3. `frontend/`
-   - Consume la API.
-   - La vista solo debe mostrar datos y reaccionar a eventos de usuario.
+  - Presenta el formulario y los resultados.
+  - Usa la API cuando está configurada y puede calcular localmente con `shared/`.
    - El estado vive en Pinia.
 
 4. `database/`
@@ -153,9 +153,9 @@ El backend es responsable de:
 
 ## Frontend: vista y consumo
 
-El frontend no debe calcular la lógica de negocio. Solo debe:
-- recolectar datos del usuario
-- enviar request a la API
+El frontend mantiene las fórmulas fuera de los componentes y delega el cálculo a `shared/` cuando no usa la API. Sus responsabilidades son:
+- recolectar y validar los datos del usuario
+- enviar la solicitud al backend si está habilitado, o llamar a `shared/` localmente
 - mostrar resultados
 - manejar errores y carga
 
@@ -168,9 +168,46 @@ El frontend no debe calcular la lógica de negocio. Solo debe:
 ### Integración con la API
 
 - `src/services/calculator.api.ts` es el único punto de contacto con el backend.
-- El frontend usa rutas relativas (`/api/...`) y el proxy de desarrollo de Vite reenvía a `http://localhost:3000`.
-- `VITE_API_URL` (ver `.env.example`) permite apuntar a una URL absoluta en despliegue.
-- Los errores del backend se propagan como `ApiError` con `status` y `fieldErrors`, y el store los expone al estado.
+- El backend se usa solo cuando `VITE_USE_BACKEND=true` y `VITE_API_URL` tiene una URL configurada.
+- Las peticiones se envían a `${VITE_API_URL}/api/...`; el archivo `frontend/.env.development` configura el backend local en `http://localhost:3000`.
+- El cliente valida las entradas con Zod. Los errores JSON del backend (por ejemplo, HTTP 400) se muestran en el formulario.
+- Si el backend no está habilitado, no se envían peticiones HTTP y el cálculo se ejecuta con los servicios de `shared/`.
+- Si una API configurada devuelve 404, 405 o una respuesta que no sea JSON, el frontend usa el cálculo local como fallback.
+- `frontend/.env.example` documenta las variables necesarias para habilitar el backend.
+
+### Desarrollo local
+
+Instala las dependencias desde la raíz del repositorio:
+
+```bash
+npm ci
+```
+
+Inicia backend y frontend en terminales separadas:
+
+```bash
+npm run dev:backend
+```
+
+```bash
+npm run dev:frontend
+```
+
+El modo de desarrollo carga `frontend/.env.development` y usa Express en `http://localhost:3000`. Para trabajar sin backend, desactiva `VITE_USE_BACKEND` o deja `VITE_API_URL` sin configurar; la calculadora seguirá funcionando localmente.
+
+### GitHub Pages
+
+GitHub Pages sirve archivos estáticos y no ejecuta Express. El workflow `.github/workflows/deploy.yml` compila el frontend con `VITE_USE_BACKEND=false`, por lo que la calculadora usa `shared/` en el navegador sin llamar a `/api`. La base de Vite está configurada para el subdirectorio `/Calculadora-Dropshipping/`.
+
+Para publicar, configura **Settings → Pages → Source → GitHub Actions** en GitHub. Cada push a `main` inicia el despliegue. La aplicación publicada está en <https://anyelo85.github.io/Calculadora-Dropshipping/>.
+
+Para probar localmente la build de producción:
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
 
 ## Base de datos: referencia futura
 
@@ -185,8 +222,8 @@ Se mantiene solo como referencia para una etapa posterior. Por ahora no se conte
 1. Mantener el cálculo en `shared/` y no dentro del DOM.
 2. Evitar duplicación de fórmulas.
 3. Un componente visual no debe contener lógica de negocio compleja.
-4. Validar siempre en backend.
-5. Mantener un flujo claro: input → validator → service → result.
+4. Validar en el cliente para dar feedback inmediato y volver a validar en backend.
+5. Mantener un flujo claro: input → validación → API o `shared/` → resultado.
 6. No iniciar instalaciones, builds o ejecuciones sin autorización explícita del usuario.
 
 ## Fases del proyecto
